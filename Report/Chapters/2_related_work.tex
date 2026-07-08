@@ -1,0 +1,28 @@
+\section{Related Work}
+\label{sec:related_work}
+
+\subsection{GNN-based Fraud Detection}
+
+Graph Neural Networks have been widely adopted for fraud detection because they jointly model node attributes and relational structure~\cite{wu2020comprehensive}. FdGars~\cite{wang2019fdgars} was among the first to apply GCNs to fraud detection in online app reviews, showing that graph topology carries signals beyond what non-relational classifiers can capture. However, standard GNNs face three challenges specific to fraud domains. First, fraudsters engage in camouflage, mimicking benign feature distributions to evade attribute-based detection. Second, neighborhood inconsistency arises because fraudulent nodes are frequently surrounded by benign neighbors, so naive message passing dilutes the fraud signal. Third, class imbalance is severe: fraud typically constitutes a small fraction of the population, causing the training objective to be dominated by benign examples.
+
+Several methods address these challenges by modifying neighborhood aggregation. CARE-GNN~\cite{dou2020enhancing} uses a reinforcement-learning-based neighbor selector that filters suspicious edges before message passing. PC-GNN~\cite{liu2021pick} employs a label-balanced neighborhood sampler to equalize class proportions per mini-batch, combined with a parameterized distance function for selecting informative neighbors. GraphConsis~\cite{liu2020alleviating} explicitly models context inconsistency, feature inconsistency, and relation inconsistency, incorporating an inconsistency-aware neighbor aggregator.
+
+A common theme across these methods is that the core intervention occurs at the neighborhood level---selecting which neighbors to aggregate from, or down-weighting unreliable edges. This adds architectural complexity and, in CARE-GNN and GraphConsis, requires training auxiliary modules whose behavior can vary across datasets. GAAP~\cite{duan2025global} departs from this line of work by shifting focus from neighbor selection to pattern representation, as discussed next.
+
+\subsection{GAAP: Attribute-Association Patterns}
+
+GAAP~\cite{duan2025global} introduces attribute-association patterns as the central representational unit for fraud detection. Rather than treating node features as raw continuous vectors, GAAP applies adaptive binning to discretize each feature dimension, then combines the resulting categorical representations with neighborhood information through a modified message-passing procedure. A global aggregation module subsequently models correlations across all patterns in the graph, enabling the model to recognize fraud at both local and global scales. GAAP achieves strong performance across multiple benchmarks without neighbor filtering or sampling.
+
+GAAP's training procedure assigns equal weight to every node in the cross-entropy loss. Once attribute-association patterns are computed, all patterns contribute identically to the gradient regardless of their frequency in the training set. Our work addresses this gap by introducing pattern-rarity-based sample weights.
+
+\subsection{Class Imbalance and Loss Re-weighting}
+
+Class imbalance has been studied extensively in machine learning. Standard approaches include oversampling the minority class, undersampling the majority class, and cost-sensitive learning where per-class misclassification costs are adjusted. Focal loss~\cite{lin2017focal} introduced a widely adopted reweighting mechanism that modifies cross-entropy by a factor $(1 - p_t)^\gamma$, where $p_t$ is the predicted probability of the true class and $\gamma$ controls the focusing strength. This down-weights the contribution of well-classified examples, steering the optimizer toward hard cases. Originally developed for dense object detection with extreme foreground-background imbalance, focal loss has been applied to numerous imbalanced classification tasks including fraud detection.
+
+Focal loss reweights by classification difficulty---how confidently the model currently predicts an example's label---rather than by the intrinsic rarity of the example's underlying pattern. A benign pattern that is trivially classified still receives low weight under focal loss, while a rare fraud pattern that happens to be confidently misclassified may not receive the needed gradient emphasis. RP-GAAP instead assigns higher weight to nodes based on the frequency of their discretized attribute-association pattern, independently of the model's current predictions. Difficulty-based reweighting shifts as the model learns, while rarity is a static property of the training data.
+
+\subsection{Positioning RP-GAAP}
+
+RP-GAAP sits at the intersection of two research directions. Like CARE-GNN, PC-GNN, and GraphConsis, it addresses signal dilution in fraud detection. Unlike these methods, it operates entirely at the loss level without architectural modification, auxiliary modules, or neighborhood manipulation. Like focal loss, it reweights the training objective to emphasize underrepresented examples. Unlike focal loss, the weight is determined by pattern rarity rather than classification margin.
+
+Concretely, RP-GAAP uses GAAP's attribute-association patterns as a starting point and computes, for each training node, how frequently its binned feature configuration appears in the training set. Nodes with infrequent patterns receive higher sample weights during loss computation. This is a plug-in modification that preserves GAAP's forward pass, binning mechanism, and global aggregation module. The method adds three hyperparameters and no learned parameters.

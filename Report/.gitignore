@@ -1,0 +1,42 @@
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.nav
+*.snm
+*.vrb
+*.lof
+*.lot
+*.brf
+*.thm
+*.idx
+*.ilg
+*.ind
+*.run.xml
+*.bcf
+*.glg
+*.glo
+*.gls
+*.ist
+*.xdy
+*.loa
+*.equ
+*.ent
+
+# PDF output (uncomment if you don't want compiled PDF in VCS)
+# *.pdf
+
+# Windows junk
+Thumbs.db
+Desktop.ini
+
+# Editor files
+*.swp
+*.swo
+*~

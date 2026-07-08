@@ -1,0 +1,85 @@
+\section{Methodology}
+\label{sec:methodology}
+
+We begin by formalizing the graph fraud detection setting and reviewing the GAAP framework. We then introduce rare-pattern weighting and define the RP-GAAP training objective. Finally, we describe the focal loss variant used for ablation.
+
+\subsection{Preliminaries}
+
+Let $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ be a graph with $N = |\mathcal{V}|$ nodes and edge set $\mathcal{E}$. Each node $i$ has a feature vector $\mathbf{x}_i \in \mathbb{R}^d$ and a binary label $y_i \in \{0, 1\}$ indicating normal ($0$) or fraudulent ($1$) behavior. The nodes are partitioned into disjoint training, validation, and test sets via boolean masks $\mathcal{T}_{\text{train}}$, $\mathcal{T}_{\text{val}}$, and $\mathcal{T}_{\text{test}}$. Fraud constitutes a small minority of nodes, so the problem is highly class-imbalanced.
+
+\subsection{GAAP Overview}
+
+GAAP~\cite{duan2025global} processes each node through three stages. First, an adaptive binning module discretizes each feature dimension into a set of learned intervals, mapping continuous features to categorical embeddings. Second, a message-passing procedure aggregates these binned representations from each node's local neighborhood, producing per-node pattern embeddings that capture the interaction between the node's own binned attributes and those of its neighbors. Third, a global aggregation module computes pairwise correlations across all pattern embeddings in the graph, yielding a final node representation that encodes both local attribute-association patterns and their global co-occurrence structure.
+
+Formally, let $\mathbf{h}_i \in \mathbb{R}^D$ denote the final representation of node $i$ output by GAAP, and let $\hat{\mathbf{y}}_i = \operatorname{softmax}(\mathbf{W} \mathbf{h}_i) \in \mathbb{R}^2$ be the predicted class probabilities. GAAP is trained by minimizing the standard cross-entropy loss over the training set:
+
+\begin{equation}
+\mathcal{L}_{\text{GAAP}} = -\frac{1}{|\mathcal{T}_{\text{train}}|} \sum_{i \in \mathcal{T}_{\text{train}}} \log \hat{y}_{i, y_i},
+\label{eq:gaap_loss}
+\end{equation}
+
+where $\hat{y}_{i,c}$ is the predicted probability for class $c$. Every training node contributes equally to Equation~\ref{eq:gaap_loss}, regardless of how frequently its attribute-association pattern appears in the dataset.
+
+\subsection{Rare-Pattern Weighting}
+
+Our core observation is that the distribution of attribute-association patterns is highly non-uniform. Most nodes exhibit common patterns (e.g., typical reviewer behavior), while a small subset exhibits rare patterns that are disproportionately associated with fraud (e.g., anomalous temporal feature combinations). Under equal-weighted cross-entropy, the gradient signal from rare patterns is overwhelmed by that of common patterns. We address this by assigning each training node a rarity-based sample weight, computed in three steps.
+
+\paragraph{Step 1: Feature selection and discretization.}
+Given the feature matrix $\mathbf{X} \in \mathbb{R}^{N \times d}$, we first compute the variance of each feature dimension over the training set and retain the $k$ dimensions with highest variance. This focuses the weighting on features that exhibit meaningful variation across nodes. Let $\mathcal{S} \subseteq \{1, \dots, d\}$ denote the set of selected feature indices, with $|\mathcal{S}| = k$.
+
+For each selected feature $j \in \mathcal{S}$, we partition its training-set values into $b$ intervals using $b+1$ quantile boundaries $q_{j,0} < q_{j,1} < \dots < q_{j,b}$, where $q_{j,0} = -\infty$ and $q_{j,b} = \infty$. Each training node $i$ is then assigned a bin index $c_{i,j} \in \{0, \dots, b-1\}$ such that $q_{j, c_{i,j}} \leq x_{i,j} < q_{j, c_{i,j}+1}$.
+
+\paragraph{Step 2: Pattern construction.}
+We encode the combination of bin assignments across all $k$ selected features as a single integer pattern identifier:
+
+\begin{equation}
+p_i = \sum_{j \in \mathcal{S}} c_{i,j} \cdot b^{\pi(j)},
+\label{eq:pattern_id}
+\end{equation}
+
+where $\pi(j)$ is the position of feature $j$ in the ordered set $\mathcal{S}$. Two training nodes receive the same pattern ID if and only if they fall into the same quantile bin for every selected feature. Let $\mathcal{P} = \{p_i : i \in \mathcal{T}_{\text{train}}\}$ be the set of all pattern IDs observed in the training set.
+
+\paragraph{Step 3: Weight computation.}
+For each pattern $p \in \mathcal{P}$, let $f(p) = |\{i \in \mathcal{T}_{\text{train}} : p_i = p\}|$ be its frequency. We assign higher weight to nodes whose pattern occurs less frequently:
+
+\begin{equation}
+\tilde{w}_i = 1.0 + (w_{\text{max}} - 1.0) \cdot \frac{\max_{p} f(p) - f(p_i)}{\max_{p} f(p) - \min_{p} f(p)},
+\label{eq:weight_norm}
+\end{equation}
+
+where $w_{\text{max}} \geq 1$ is a hyperparameter capping the maximum weight. The term $\tilde{w}_i$ is a linear interpolation between $1.0$ (for the most frequent pattern) and $w_{\text{max}}$ (for the rarest pattern). If all patterns have equal frequency, all weights are set to $1.0$.
+
+We additionally apply a fraud boost to further emphasize fraudulent examples:
+
+\begin{equation}
+w_i = \min\left(\tilde{w}_i \cdot \phi^{\mathbb{1}[y_i = 1]}, \; w_{\text{max}} \cdot \phi\right),
+\label{eq:fraud_boost}
+\end{equation}
+
+where $\phi \geq 1$ is the fraud boost multiplier, and the indicator $\mathbb{1}[y_i = 1]$ ensures the boost applies only to fraud nodes. The final weight $w_i$ is clipped to $[1.0, \; w_{\text{max}} \cdot \phi]$. Nodes not in the training set receive $w_i = 1.0$. The resulting weight vector $\mathbf{w} \in \mathbb{R}^N$ requires no gradient computation and is evaluated once before training begins.
+
+\subsection{RP-GAAP Training Objective}
+
+We integrate the rarity weights into the cross-entropy loss by replacing the uniform average in Equation~\ref{eq:gaap_loss} with a weighted sum:
+
+\begin{equation}
+\mathcal{L}_{\text{RP-GAAP}} = - \frac{1}{\sum_{i \in \mathcal{T}_{\text{train}}} w_i} \sum_{i \in \mathcal{T}_{\text{train}}} w_i \cdot \log \hat{y}_{i, y_i}.
+\label{eq:rpgaap_loss}
+\end{equation}
+
+The GAAP model forward pass is entirely unchanged: rarity weights modify only the scalar multiplier applied to each per-node loss term. At inference, no weighting is applied.
+
+The method introduces exactly three hyperparameters: the number of quantile bins $b$, the number of selected features $k$, and the maximum weight $w_{\text{max}}$, plus the fraud boost $\phi$. We use $b = 5$, $k = 10$, $w_{\text{max}} = 3.0$, and $\phi = 1.5$ across all experiments unless otherwise noted.
+
+\subsection{Ablation: Focal Loss}
+
+To isolate the effect of pattern-rarity-based weighting from general-purpose loss reweighting, we additionally evaluate a variant that replaces the rarity weights with focal loss~\cite{lin2017focal}. Focal loss modifies cross-entropy by a multiplicative factor that depends on the model's confidence:
+
+\begin{equation}
+\mathcal{L}_{\text{focal}} = -\frac{1}{|\mathcal{T}_{\text{train}}|} \sum_{i \in \mathcal{T}_{\text{train}}} \alpha_{y_i} (1 - \hat{y}_{i, y_i})^{\gamma} \cdot \log \hat{y}_{i, y_i},
+\label{eq:focal_loss}
+\end{equation}
+
+where $\gamma \geq 0$ controls the focusing strength (larger values more aggressively down-weight well-classified examples) and $\alpha_c$ is a class-specific weight. We set $\gamma = 2.0$ and $\boldsymbol{\alpha} = [1.0, 3.0]$ following standard practice for imbalanced binary classification. Unlike rarity weights, focal loss reweights by prediction confidence, which changes throughout training, rather than by the static frequency of each node's underlying pattern.
+
+We consider four training configurations in our experiments: (1) \textbf{GAAP} (baseline, Equation~\ref{eq:gaap_loss}), (2) \textbf{GAAP + Focal} (Equation~\ref{eq:focal_loss}), (3) \textbf{RP-GAAP} (rare-pattern weighting, Equation~\ref{eq:rpgaap_loss}), and (4) \textbf{RP-GAAP + Focal} (both weighting schemes applied jointly, with rarity weights passed as sample weights to the focal loss). Configuration (3) is our primary contribution.

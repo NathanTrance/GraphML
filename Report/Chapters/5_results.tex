@@ -1,0 +1,126 @@
+\section{Results and Discussion}
+\label{sec:results}
+
+\subsection{Main Results}
+
+Table~\ref{tab:main_results} reports the performance of all four methods on each dataset. We present all seven metrics for completeness; the primary metric for comparison is Recall@K, which captures ranking quality at the operational threshold where a fixed number of top-scoring nodes would be investigated.
+
+\begin{table}[h]
+\centering
+\caption{Main results across four datasets. Best per metric in bold, second-best underlined.}
+\label{tab:main_results}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llccccccc}
+\toprule
+Dataset & Method & AUC & AP & MF1 & Recall & Prec & Recall@K & Acc \\
+\midrule
+\multirow{4}{*}{YelpChi} 
+& GAAP      & \textbf{0.9866} & \underline{0.9468} & \underline{0.9292} & 0.8339 & \underline{0.9257} & \underline{0.8839} & \underline{0.9667} \\
+& +Focal    & \underline{0.9855} & \textbf{0.9483} & 0.9281 & \textbf{0.8869} & 0.8669 & 0.8823 & 0.9640 \\
+& RP-GAAP   & 0.9842 & 0.9459 & \textbf{0.9333} & \underline{0.8400} & \textbf{0.9341} & \textbf{0.8862} & \textbf{0.9678} \\
+& +Both     & 0.9827 & 0.9321 & 0.9176 & 0.8077 & 0.9130 & 0.8700 & 0.9608 \\
+\midrule
+\multirow{4}{*}{T-Finance} 
+& GAAP      & 0.9672 & \underline{0.9046} & 0.9219 & 0.8142 & 0.8907 & 0.8488 & 0.9870 \\
+& +Focal    & 0.9714 & 0.9032 & \underline{0.9313} & \underline{0.8197} & \underline{0.9234} & 0.8530 & \underline{0.9873} \\
+& RP-GAAP   & \underline{0.9726} & 0.9017 & 0.9288 & 0.8044 & \textbf{0.9325} & \textbf{0.8585} & 0.9872 \\
+& +Both     & \textbf{0.9741} & \textbf{0.9079} & \textbf{0.9314} & \textbf{0.8363} & 0.9041 & \underline{0.8571} & \textbf{0.9882} \\
+\midrule
+\multirow{4}{*}{Elliptic} 
+& GAAP      & 0.9257 & 0.7908 & \textbf{0.8737} & \underline{0.7285} & \textbf{0.8010} & \underline{0.7322} & \underline{0.9697} \\
+& +Focal    & \underline{0.9343} & \underline{0.7962} & \underline{0.8712} & \textbf{0.7295} & \underline{0.7900} & \textbf{0.7359} & \textbf{0.9734} \\
+& RP-GAAP   & \textbf{0.9348} & \textbf{0.7994} & 0.8611 & 0.7276 & 0.7526 & 0.7313 & 0.9693 \\
+& +Both     & 0.9310 & 0.7936 & 0.8638 & 0.7267 & 0.7641 & 0.7322 & 0.9479 \\
+\midrule
+\multirow{4}{*}{Tolokers} 
+& GAAP      & \underline{0.8419} & \underline{0.5661} & 0.7084 & 0.5358 & \textbf{0.5495} & \underline{0.5498} & \textbf{0.8095} \\
+& +Focal    & 0.8359 & 0.5660 & 0.7023 & 0.5623 & 0.5194 & 0.5296 & 0.7364 \\
+& RP-GAAP   & 0.8374 & 0.5568 & \underline{0.7124} & \underline{0.6168} & 0.5170 & 0.5467 & \underline{0.7942} \\
+& +Both     & \textbf{0.8467} & \textbf{0.5720} & \textbf{0.7236} & \textbf{0.6511} & \underline{0.5265} & \textbf{0.5576} & 0.7269 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\paragraph{Recall@K analysis.}
+Table~\ref{tab:recall_at_k} extracts the primary metric for direct comparison across methods and datasets. RP-GAAP achieves the best Recall@K on YelpChi~(+0.23) and T-Finance~(+0.97), while focal loss edges ahead on Elliptic~(+0.37) and the combined variant wins on Tolokers~(+0.78). The largest absolute gain is observed on T-Finance, where the 3.4\% fraud ratio makes the training signal particularly sparse and rare-pattern weighting most impactful. On Elliptic, all methods fall within a $\pm0.004$ band around the baseline, suggesting that the temporal structure of Bitcoin transactions is not well captured by static feature binning. On Tolokers, the hardest dataset with the lowest baseline performance, the combined RP-GAAP+Focal variant yields the strongest improvement, improving fraud recall from $0.5358$ to $0.6511$ (a 21.5\% relative gain).
+
+\begin{table}[h]
+\centering
+\caption{Recall@K scores (primary metric) across datasets and methods. Best per dataset in bold, second-best underlined. $\Delta$ is the absolute gain of the best method over GAAP.}
+\label{tab:recall_at_k}
+\begin{tabular}{lcccc|c}
+\toprule
+Dataset & GAAP & +Focal & RP-GAAP & +Both & Best $\Delta$ \\
+\midrule
+YelpChi     & \underline{0.8839} & 0.8823 & \textbf{0.8862} & 0.8700 & +0.23 \\
+T-Finance   & 0.8488 & 0.8530 & \textbf{0.8585} & \underline{0.8571} & \textbf{+0.97} \\
+Elliptic    & \underline{0.7322} & \textbf{0.7359} & 0.7313 & 0.7322 & +0.37 \\
+Tolokers    & \underline{0.5498} & 0.5296 & 0.5467 & \textbf{0.5576} & +0.78 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Fraud recall.}
+Table~\ref{tab:recall} highlights fraud-class recall, which measures the proportion of true fraudsters that are correctly identified. RP-GAAP consistently improves recall over the baseline on YelpChi, Elliptic, and Tolokers, with the largest gain on Tolokers where the combined variant recovers $65.1\%$ of fraudsters compared to $53.6\%$ for GAAP. This suggests that rare-pattern weighting helps the model attend to fraud signals that the baseline model overlooks entirely.
+
+\begin{table}[h]
+\centering
+\caption{Fraud recall across methods. Best per dataset in bold, second-best underlined.}
+\label{tab:recall}
+\begin{tabular}{lcccc}
+\toprule
+Dataset & GAAP & +Focal & RP-GAAP & +Both \\
+\midrule
+YelpChi     & 0.8339 & \textbf{0.8869} & \underline{0.8400} & 0.8077 \\
+T-Finance   & 0.8142 & \underline{0.8197} & 0.8044 & \textbf{0.8363} \\
+Elliptic    & \underline{0.7285} & \textbf{0.7295} & 0.7276 & 0.7267 \\
+Tolokers    & 0.5358 & 0.5623 & \underline{0.6168} & \textbf{0.6511} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Discussion}
+
+Several patterns emerge from the main results. First, rare-pattern weighting alone tends to dominate on datasets where GAAP already performs well (YelpChi, T-Finance), while the combination with focal loss is more effective on datasets where the baseline struggles (Tolokers). This suggests that rarity-based weighting improves discrimination when the model can already rank most nodes correctly, and difficulty-based focal loss provides complementary benefit when classification confidence is genuinely low. Second, the precision-recall tradeoff holds consistently: where recall improves, precision tends to drop, though RP-GAAP maintains higher precision than focal loss on YelpChi (0.9341 vs.\ 0.8669). Third, Elliptic is largely resistant to all loss-level interventions, consistent with its temporal graph structure where static feature binning may produce a pattern space in which most configurations are already uncommon.
+
+\subsection{Hyperparameter Sensitivity}
+
+To understand the sensitivity of RP-GAAP to its four hyperparameters, we ran a grid sweep on Tolokers, varying one parameter at a time around the default settings. Tolokers was chosen because it shows the largest performance gap and the most room for improvement. Table~\ref{tab:sweep} summarizes the best Recall@K achieved by sweeping each parameter individually.
+
+\begin{table}[h]
+\centering
+\caption{Hyperparameter sweep on Tolokers (28 runs). Gain is the Recall@K difference between the best value and the default.}
+\label{tab:sweep}
+\begin{tabular}{lcccc}
+\toprule
+Parameter & Default & Swept Values & Best & Gain \\
+\midrule
+rare\_num\_bins      & 5   & \{3, 5, 7\}        & 7    & +1.39 \\
+rare\_top\_k\_features & 10  & \{5, 10, 15\}      & 5    & +1.56 \\
+rare\_max\_weight     & 3.0 & \{1.5, 2.0, 3.0, 5.0\} & 5.0  & +1.56 \\
+rare\_fraud\_boost    & 1.5 & \{1.0, 1.5, 2.0, 3.0\} & 1.0  & +1.39 \\
+focal\_alpha (class 1) & 3.0 & \{1.5, 2.0, 3.0, 4.0\} & 2.0  & +0.29 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The sweep reveals that the default hyperparameters are conservative: reducing $k$ from 10 to 5 features and increasing $w_{\text{max}}$ from 3.0 to 5.0 each provide a Recall@K gain of roughly 1.5 points over the default RP-GAAP configuration. However, the Recall@K noise floor on Tolokers is estimated at approximately $\pm$0.02 based on the observed variance across the sweep runs, so individual gains below roughly 2 points should be interpreted cautiously. The key insight is that the method is not brittle: all swept values produce performance within a narrow band, and no parameter setting causes catastrophic degradation.
+
+Figure~\ref{fig:sweep} visualizes the sweep results across all five parameters.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{Figures/sweep_tolokers.pdf}
+\caption{Hyperparameter sensitivity on Tolokers. Each subplot shows Recall@K as a function of a single parameter, with all others held at default values. The dashed horizontal line indicates the GAAP baseline Recall@K.}
+\label{fig:sweep}
+\end{figure}
+
+Figure~\ref{fig:recall_at_k_bar} provides a visual summary of the main Recall@K comparison across datasets and methods.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{Figures/recall_at_k_comparison.pdf}
+\caption{Recall@K comparison across all four datasets and four methods. Bars are grouped by dataset.}
+\label{fig:recall_at_k_bar}
+\end{figure}

@@ -1,0 +1,49 @@
+\section{Experimental Setup}
+\label{sec:experiment_setups}
+
+We evaluate RP-GAAP on four real-world graph fraud detection benchmarks, following the same data splits and evaluation protocol as the original GAAP~\cite{duan2025global}.
+
+\subsection{Datasets}
+
+Table~\ref{tab:datasets} summarizes the four datasets. All are binary classification problems where the minority class corresponds to fraudulent (or illicit) behavior. The datasets span diverse domains and fraud ratios, from 3.4\% (T-Finance) to 16.9\% (Tolokers), and vary in scale from roughly 11,000 to over 200,000 nodes.
+
+\begin{table}[h]
+\centering
+\caption{Dataset statistics. Fraud ratio is the percentage of minority-class nodes in the entire graph.}
+\label{tab:datasets}
+\begin{tabular}{lrrrr}
+\toprule
+Dataset & \# Nodes & \# Edges & \# Features & Fraud \% \\
+\midrule
+YelpChi     & 45,954  & 3,846,979 & 32  & 14.5 \\
+T-Finance   & 39,357  & 21,222,543 & 10 & 3.4 \\
+Elliptic    & 203,769 & 234,355   & 93  & 9.5 \\
+Tolokers    & 11,758  & 519,000   & 10  & 16.9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+YelpChi~\cite{yang2016revisiting} contains hotel and restaurant reviews with spam and fake-review indicators. T-Finance~\cite{tang2023gadbench} captures transaction records in a financial network where anomalies indicate fraud. Elliptic~\cite{weber2019anti} is a Bitcoin transaction graph with labels indicating licit versus illicit activity. Tolokers~\cite{tang2023gadbench} is a crowdsourcing worker graph where fraudulent workers collude to complete tasks incorrectly.
+
+We use the pre-processed graph data and fixed train/validation/test splits provided by the GAAP repository~\cite{duan2025global}. All node features are numeric and are used without additional normalization beyond what the original pipeline performs.
+
+\subsection{Metrics}
+
+Following GAAP, we report the following metrics on the test set: Area Under the ROC Curve (AUC), Average Precision (AP), Macro-F1, fraud-class Recall, fraud-class Precision, overall Accuracy, and Recall@K. The Recall@K metric, introduced by GAAP, is the model's recall on the top-$K$ highest-scoring nodes where $K$ equals the number of true fraudulent nodes in the test set; it directly measures ranking quality under the assumption that a fixed budget of top-scoring nodes will be investigated. Among these, Recall@K is the primary metric used by GAAP to compare methods, as it directly captures the practical scenario of flagging the most suspicious nodes for manual review.
+
+\subsection{Methods Compared}
+
+We compare four training configurations, all using the identical GAAP model architecture and hyperparameters:
+
+\begin{enumerate}
+    \item \textbf{GAAP} (Baseline): Trained with standard cross-entropy loss (Equation~\ref{eq:gaap_loss}).
+    \item \textbf{GAAP + Focal}: Trained with focal loss (Equation~\ref{eq:focal_loss}, $\gamma=2.0$, $\boldsymbol{\alpha}=[1.0, 3.0]$).
+    \item \textbf{RP-GAAP} (Ours): GAAP trained with rare-pattern-weighted cross-entropy (Equation~\ref{eq:rpgaap_loss}, $b=5$, $k=10$, $w_{\text{max}}=3.0$, $\phi=1.5$).
+    \item \textbf{RP-GAAP + Focal}: Both weighting schemes combined; rarity weights are passed as sample weights to the focal loss.
+\end{enumerate}
+
+The first two variants serve as baselines; the third is our primary contribution. The fourth isolates the interaction between pattern-rarity weighting and difficulty-based reweighting.
+
+\subsection{Implementation Details}
+
+We reproduce all results using the official GAAP codebase with the same model hyperparameters as reported by Duan et al.~\cite{duan2025global}. The GAAP architecture uses 2 message-passing layers, a hidden dimension of 128, and adaptive feature binning with 8 bins per feature dimension. Training uses the Adam optimizer with a learning rate of $10^{-3}$ and weight decay of $10^{-4}$, with early stopping on validation Recall@K after 100 epochs. Rare-pattern weights are computed once before training on CPU using only the training-set nodes and features, adding less than one second of preprocessing time on all datasets. All experiments were run on a single NVIDIA A100 GPU.

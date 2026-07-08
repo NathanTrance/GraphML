@@ -1,0 +1,52 @@
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.nav
+*.snm
+*.vrb
+*.lof
+*.lot
+*.brf
+*.thm
+*.idx
+*.ilg
+*.ind
+*.run.xml
+*.bcf
+*.glg
+*.glo
+*.gls
+*.ist
+*.xdy
+*.loa
+*.equ
+*.ent
+
+# PDF output
+# *.pdf
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.eggs/
+
+# Windows
+Thumbs.db
+Desktop.ini
+nul
+
+# Editor
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
