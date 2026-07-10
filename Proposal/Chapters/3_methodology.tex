@@ -7,16 +7,11 @@ Let $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ be an attributed graph with $N = 
 
 \subsection{Background: GAAP}
 
-GAAP~\cite{duan2025gaap} produces a node representation $\mathbf{h}_i \in \mathbb{R}^D$ for each node $i$ through three stages, then predicts $\hat{\mathbf{y}}_i = \operatorname{softmax}(\mathbf{W} \mathbf{h}_i)$. It is trained with standard cross-entropy:
-
-\begin{equation}
-\mathcal{L}_{\text{GAAP}} = -\frac{1}{|\mathcal{T}_{\text{train}}|} \sum_{i \in \mathcal{T}_{\text{train}}} \log \hat{y}_{i, y_i}
-\label{eq:gaap}
-\end{equation}
+GAAP~\cite{duan2025gaap} produces a node representation $\mathbf{h}_i \in \mathbb{R}^D$ for each node $i$ through three stages, then predicts $\hat{\mathbf{y}}_i = \operatorname{softmax}(\mathbf{W} \mathbf{h}_i)$ and is trained with cross-entropy. Its design is well-suited to our benchmarks: DyBEM preserves per-attribute semantics across heterogeneous node features, GraphSAGE extracts relational fraud signals from interaction graphs, and global attention captures long-range dependencies without over-smoothing.
 
 \subsubsection{Dynamic Binning Embedding (DyBEM)}
 
-Raw continuous features cannot be fed directly into message passing without fusing distinct semantics. DyBEM addresses this by learning $b$ adaptive bin boundaries per feature dimension. For the $j$-th feature, the bin boundaries $\{q_{j,0}, q_{j,1}, \dots, q_{j,b}\}$ are initialized via decision-tree binning on the training set~\cite{duan2025gaap} and optimized jointly with the GNN. Each scalar value $x_{i,j}$ is then represented as a $b$-dimensional vector where the $m$-th component encodes the fragment-wise membership of $x_{i,j}$ in bin $m$, producing a bin embedding $\mathbf{e}_{i,j} \in \mathbb{R}^{b}$. Features from all $d$ dimensions are stacked to form $\mathbf{E}_i \in \mathbb{R}^{d \times b}$, which is flattened and projected to the GNN's hidden dimension.
+Raw continuous features cannot be fed directly into message passing without fusing distinct semantics. DyBEM addresses this by learning $b$ adaptive bin boundaries per feature dimension. For the $j$-th feature, the bin boundaries $\{q_{j,0}, q_{j,1}, \dots, q_{j,b}\}$ are initialized via decision-tree binning on the training set~\cite{duan2025gaap} and optimized jointly with the GNN. Each scalar value $x_{i,j}$ is represented as a $b$-dimensional vector where the $m$-th component encodes the fragment-wise membership of $x_{i,j}$ in bin $m$, producing a bin embedding $\mathbf{e}_{i,j} \in \mathbb{R}^{b}$.
 
 \subsubsection{Message-Passing with GraphSAGE}
 
@@ -27,7 +22,7 @@ GAAP employs GraphSAGE~\cite{hamilton2017inductive} with max-pooling aggregation
 \label{eq:sage}
 \end{equation}
 
-where $\mathbf{h}_v^{(0)} = \text{MLP}(\mathbf{E}_v)$ is the DyBEM-projected feature, $\mathcal{N}(v)$ denotes the neighborhood of $v$, and $\sigma$ is a ReLU activation. Max-pooling is chosen because it preserves the strongest signals per dimension rather than averaging them away---critical when a fraud node is surrounded by mostly benign neighbors. The output of the final GNN layer is denoted $\mathbf{g}_i \in \mathbb{R}^{d_h}$, representing the node's local \textit{association pattern}.
+where $\mathbf{h}_v^{(0)} = \text{MLP}(\mathbf{E}_v)$ is the DyBEM-projected feature and $\sigma$ is ReLU. Max-pooling preserves the strongest signals per dimension---critical when fraud nodes are surrounded by benign neighbors.
 
 \subsubsection{Global Pattern Aggregation}
 
@@ -35,30 +30,16 @@ A multi-head cross-attention module then captures long-range correlations by att
 
 \subsection{RP-GAAP: Rare-Pattern Weighted Training}
 
-Under GAAP's equal-weighted loss (Eq.~\ref{eq:gaap}), all training nodes contribute identically to the gradient. Yet the distribution of attribute-association patterns is highly skewed: common patterns dominate, while rare patterns---disproportionately associated with fraud---receive negligible gradient signal. RP-GAAP addresses this by precomputing a rarity weight $w_i$ for each training node.
+Under GAAP's equal-weighted loss, all training nodes contribute identically to the gradient. Yet the distribution of attribute-association patterns is highly skewed: common patterns dominate, while rare patterns---disproportionately associated with fraud---receive negligible gradient signal. RP-GAAP addresses this by precomputing a rarity weight $w_i$ for each training node.
 
-\paragraph{Pattern construction.}
-We select the top-$k$ features by variance over $\mathcal{T}_{\text{train}}$. For each selected feature $j$, we partition its training-set values into $b$ quantile bins with boundaries $q_{j,0} < \cdots < q_{j,b}$. Node $i$ is assigned bin index $c_{i,j}$ where $q_{j, c_{i,j}} \leq x_{i,j} < q_{j, c_{i,j}+1}$. The $k$ bin indices are combined into a single pattern identifier:
-
-\begin{equation}
-p_i = \sum_{j \in \mathcal{S}} c_{i,j} \cdot b^{\pi(j)}
-\label{eq:pattern}
-\end{equation}
-
-where $\mathcal{S}$ is the set of selected feature indices and $\pi(j)$ maps each feature to its position in the set.
-
-\paragraph{Weight assignment.}
-Let $f(p) = |\{i \in \mathcal{T}_{\text{train}} : p_i = p\}|$ be the frequency of pattern $p$ in the training set. We linearly interpolate between 1.0 (most frequent) and $w_{\text{max}}$ (rarest), then apply a multiplicative boost $\phi \geq 1$ to fraud nodes, clipped to $[1.0,\; w_{\text{max}} \cdot \phi]$:
+We select the top-$k$ features by variance over $\mathcal{T}_{\text{train}}$, partition each selected feature $j$ into $b$ quantile bins, assign node $i$ a bin index $c_{i,j}$, and combine into a pattern ID $p_i = \sum_{j \in \mathcal{S}} c_{i,j} \cdot b^{\pi(j)}$. Let $f(p) = |\{i \in \mathcal{T}_{\text{train}} : p_i = p\}|$ be the frequency of pattern $p$. We linearly interpolate between 1.0 (most frequent) and $w_{\text{max}}$ (rarest), then apply a fraud-class boost $\phi \geq 1$, clipped to $[1.0,\; w_{\text{max}} \cdot \phi]$:
 
 \begin{equation}
 w_i = \min\!\Big(\!\big[1.0 + (w_{\text{max}} - 1.0) \cdot \frac{\max_q f(q) - f(p_i)}{\max_q f(q) - \min_q f(q)}\big] \cdot \phi^{\mathbb{1}[y_i = 1]},\; w_{\text{max}} \cdot \phi\Big)
 \label{eq:weight}
 \end{equation}
 
-Nodes not in $\mathcal{T}_{\text{train}}$ receive $w_i = 1.0$. The weight vector $\mathbf{w} \in \mathbb{R}^N$ is computed once before training on CPU (adding $<$1~second overhead) and requires no gradients.
-
-\paragraph{RP-GAAP loss.}
-We replace the uniform average in Eq.~\ref{eq:gaap} with a weighted sum:
+Nodes not in $\mathcal{T}_{\text{train}}$ receive $w_i = 1.0$. Weights are computed once before training (CPU, $<$1s) and require no gradients. The RP-GAAP loss replaces the uniform cross-entropy average with a weighted sum:
 
 \begin{equation}
 \mathcal{L}_{\text{RP-GAAP}} = -\frac{1}{\sum_{i \in \mathcal{T}_{\text{train}}} w_i} \sum_{i \in \mathcal{T}_{\text{train}}} w_i \cdot \log \hat{y}_{i, y_i}
