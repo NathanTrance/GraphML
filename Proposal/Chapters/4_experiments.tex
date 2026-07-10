@@ -1,0 +1,28 @@
+\section{Experimental Setup \& Preliminary Results}
+\label{sec:experiments}
+
+\subsection{Datasets and Metrics}
+
+We evaluate on four GADBench~\cite{tang2024gadbench} benchmarks following GAAP's splits~\cite{duan2025gaap}: \textbf{YelpChi}~\cite{rayana2015collective} (review spam, 14.5\% fraud), \textbf{T-Finance}~\cite{tang2022rethinking} (financial transactions, 3.4\% fraud), \textbf{Elliptic}~\cite{weber2019elliptic} (illicit Bitcoin, 9.5\% fraud), and \textbf{Tolokers}~\cite{platonov2023tolokers} (crowdsourcing, 16.9\% fraud). Following GAAP, our primary metric is Recall@K---the fraction of true fraud nodes in the top-$K$ predictions where $K$ equals the total number of fraud nodes; we also report AUC-ROC, AP, Macro-F1, and fraud-class Recall and Precision.
+
+\subsection{Preliminary Results}
+
+Table~\ref{tab:prelim} reports Recall@K with default hyperparameters across all four loss configurations.
+
+\begin{table}[h]
+\centering
+\caption{Recall@K on four datasets. Best per dataset in bold.}
+\label{tab:prelim}
+\begin{tabular}{lcccc|c}
+\toprule
+Dataset & GAAP & +Focal & RP-GAAP & +Both & Best $\Delta$ \\
+\midrule
+YelpChi     & 0.8839 & 0.8823 & \textbf{0.8862} & 0.8700 & +0.23 \\
+T-Finance   & 0.8488 & 0.8530 & \textbf{0.8585} & 0.8571 & \textbf{+0.97} \\
+Elliptic    & 0.7322 & \textbf{0.7359} & 0.7313 & 0.7322 & +0.37 \\
+Tolokers    & 0.5498 & 0.5296 & 0.5467 & \textbf{0.5576} & +0.78 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+RP-GAAP improves over the GAAP baseline on YelpChi ($+0.23$) and T-Finance ($+0.97$), the dataset with the most extreme class imbalance. On Tolokers, combining rare weighting with focal loss yields the best Recall@K ($+0.78$). Elliptic shows minimal differences, likely due to its temporal structure resisting static feature binning. As next steps, we will run ablation studies and perform hyperparameter tuning to yield the final results.
