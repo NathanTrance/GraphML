@@ -31,14 +31,7 @@ where $\mathbf{h}_v^{(0)} = \text{MLP}(\mathbf{E}_v)$ is the DyBEM-projected fea
 
 \subsubsection{Global Pattern Aggregation}
 
-To mitigate over-smoothing and capture long-range dependencies across the graph, GAAP applies a multi-head cross-attention module. Rather than computing pairwise attention across all $N$ nodes (prohibitively expensive), GAAP caches the GNN output from the previous epoch as historical embeddings $\tilde{\mathbf{G}} \in \mathbb{R}^{N \times d_h}$. For each node $i$, the query is its current GNN output and the keys/values are the cached embeddings:
-
-\begin{equation}
-\mathbf{o}_i = \operatorname{MHA}\big(\mathbf{q}_i = \mathbf{g}_i,\; \mathbf{K} = \tilde{\mathbf{G}},\; \mathbf{V} = \tilde{\mathbf{G}}\big)
-\label{eq:mha}
-\end{equation}
-
-The final representation is a residual combination $\mathbf{h}_i = \alpha \cdot \mathbf{o}_i + (1 - \alpha) \cdot \mathbf{W}_{\text{out}} \mathbf{g}_i$, where $\alpha$ is a learned or fixed mixing coefficient.
+A multi-head cross-attention module then captures long-range correlations by attending each node's current GNN output against historical embeddings cached from the previous epoch~\cite{duan2025gaap}, mitigating over-smoothing while keeping computation efficient.
 
 \subsection{RP-GAAP: Rare-Pattern Weighted Training}
 
@@ -77,6 +70,6 @@ The GAAP forward pass (DyBEM $\to$ GraphSAGE $\to$ MHA $\to$ classifier) is enti
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\linewidth]{Figures/framework_crc.jpg}
-    \caption{The GAAP framework. DyBEM creates binned attribute patterns, GraphSAGE (Eq.~\ref{eq:sage}) extracts association patterns, and global cross-attention (Eq.~\ref{eq:mha}) captures pattern correlations. RP-GAAP adds rarity weights (Eq.~\ref{eq:weight}) to the loss without modifying this architecture. Figure adapted from Duan et al.~\cite{duan2025gaap}.}
+    \caption{The GAAP framework. DyBEM creates binned attribute patterns, GraphSAGE (Eq.~\ref{eq:sage}) extracts association patterns, and global cross-attention captures pattern correlations. RP-GAAP adds rarity weights (Eq.~\ref{eq:weight}) to the loss without modifying this architecture. Figure adapted from~\cite{duan2025gaap}.}
     \label{fig:gaap-framework}
 \end{figure}
