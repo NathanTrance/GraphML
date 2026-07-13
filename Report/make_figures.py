@@ -23,7 +23,7 @@ plt.rcParams.update({
 # ══════ Figure 1: Recall@K bar chart ══════
 datasets = ['YelpChi', 'T-Finance', 'Elliptic', 'Tolokers']
 methods = ['GAAP', '+Focal', 'RP-GAAP', '+Both']
-colors  = ['#7fc97f', '#beaed4', '#fdc086', '#386cb0']
+colors  = ['#011f4b', '#03396c', '#005b96', '#6497b1']
 
 data = {
     'YelpChi':   [0.8839, 0.8823, 0.8862, 0.8700],
@@ -65,18 +65,12 @@ sweeps = {
     'focal_alpha_class1':  {1.5: 0.5364, 2.0: 0.5530, 3.0: 0.5514, 4.0: 0.5483},
 }
 
-defaults = {
-    'rare_num_bins': 5, 'rare_top_k_features': 10,
-    'rare_max_weight': 3.0, 'rare_fraud_boost': 1.5,
-    'focal_alpha_class1': 3.0,
-}
-
 titles = [
-    r'rare\_num\_bins',
-    r'rare\_top\_k\_features',
-    r'rare\_max\_weight',
-    r'rare\_fraud\_boost',
-    r'focal\_alpha (class 1)',
+    r'rare_num_bins',
+    r'rare_top_k_features',
+    r'rare_max_weight',
+    r'rare_fraud_boost',
+    r'focal_alpha (class 1)',
 ]
 
 baseline = 0.5498
@@ -91,17 +85,12 @@ for idx, (param, values) in enumerate(sweeps.items()):
     y_vals  = [v for _, v in kv]
     xs = range(len(x_labels))
 
-    bars = ax.bar(xs, y_vals, color=colors[idx % len(colors)], edgecolor='white', linewidth=0.3)
+    bars = ax.bar(xs, y_vals, color='#b3cde0', edgecolor='white', linewidth=0.3)
 
-    default_val = defaults[param]
     best_y = max(y_vals)
     for i, (k, yv) in enumerate(kv):
-        if str(k) == str(default_val):
-            bars[i].set_edgecolor('black')
-            bars[i].set_linewidth(1.5)
-            bars[i].set_hatch('//')
         if yv == best_y:
-            bars[i].set_color('#e41a1c')
+            bars[i].set_color('#005b96')
 
     ax.axhline(y=baseline, color='gray', linestyle='--', linewidth=0.8, alpha=0.7)
     ax.set_xticks(xs)
