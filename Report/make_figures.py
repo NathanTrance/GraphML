@@ -22,7 +22,7 @@ plt.rcParams.update({
 
 # ══════ Figure 1: Recall@K bar chart ══════
 datasets = ['YelpChi', 'T-Finance', 'Elliptic', 'Tolokers']
-methods = ['GAAP', '+Focal', 'RP-GAAP', '+Both']
+methods = ['GAAP', '+Focal', 'RP-GAAP', '+Focal']
 colors  = ['#011f4b', '#03396c', '#005b96', '#6497b1']
 
 data = {

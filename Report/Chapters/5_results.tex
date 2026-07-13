@@ -18,32 +18,32 @@ Dataset & Method & AUC & AP & MF1 & Recall & Prec & Recall@K & Acc \\
 & GAAP      & 0.9866 & 0.9468 & 0.9292 & 0.8339 & \textbf{0.9257} & 0.8839 & 0.9667 \\
 & +Focal    & 0.9859 & \textbf{0.9524} & 0.9314 & 0.8769 & 0.8872 & 0.8839 & 0.9666 \\
 & RP-GAAP   & \textbf{0.9867} & 0.9515 & \textbf{0.9344} & \textbf{0.8839} & 0.8907 & \textbf{0.8885} & \textbf{0.9688} \\
-& +Both     & 0.9827 & 0.9321 & 0.9176 & 0.8077 & 0.9130 & 0.8700 & 0.9608 \\
+& +Focal     & 0.9827 & 0.9321 & 0.9176 & 0.8077 & 0.9130 & 0.8700 & 0.9608 \\
 \midrule
 \multirow{4}{*}{T-Finance} 
 & GAAP      & 0.9672 & 0.9046 & 0.9219 & 0.8142 & 0.8907 & 0.8488 & 0.9870 \\
 & +Focal    & 0.9706 & 0.9000 & 0.9290 & 0.8155 & 0.9188 & 0.8571 & 0.9726 \\
 & RP-GAAP   & 0.9715 & 0.8981 & \textbf{0.9370} & 0.8239 & \textbf{0.9429} & \textbf{0.8599} & 0.9870 \\
-& +Both     & \textbf{0.9741} & \textbf{0.9079} & 0.9314 & \textbf{0.8363} & 0.9041 & 0.8571 & \textbf{0.9882} \\
+& +Focal     & \textbf{0.9741} & \textbf{0.9079} & 0.9314 & \textbf{0.8363} & 0.9041 & 0.8571 & \textbf{0.9882} \\
 \midrule
 \multirow{4}{*}{Elliptic} 
 & GAAP      & 0.9257 & 0.7908 & 0.8737 & 0.7285 & 0.8010 & 0.7322 & 0.9697 \\
 & +Focal    & 0.9343 & 0.7962 & 0.8712 & \textbf{0.7295} & 0.7900 & \textbf{0.7359} & \textbf{0.9734} \\
 & RP-GAAP   & \textbf{0.9377} & \textbf{0.8016} & \textbf{0.8869} & 0.7193 & \textbf{0.8694} & \textbf{0.7359} & 0.9656 \\
-& +Both     & 0.9310 & 0.7936 & 0.8638 & 0.7267 & 0.7641 & 0.7322 & 0.9479 \\
+& +Focal     & 0.9310 & 0.7936 & 0.8638 & 0.7267 & 0.7641 & 0.7322 & 0.9479 \\
 \midrule
 \multirow{4}{*}{Tolokers} 
 & GAAP      & 0.8419 & 0.5661 & 0.7084 & 0.5358 & \textbf{0.5495} & 0.5498 & \textbf{0.8095} \\
 & +Focal    & 0.8440 & \textbf{0.5776} & 0.7147 & 0.6511 & 0.5091 & 0.5561 & 0.7381 \\
 & RP-GAAP   & \textbf{0.8460} & 0.5765 & \textbf{0.7288} & 0.6386 & 0.5423 & \textbf{0.5623} & 0.8085 \\
-& +Both     & 0.8380 & 0.5716 & 0.7116 & \textbf{0.6573} & 0.5012 & \textbf{0.5623} & 0.7568 \\
+& +Focal     & 0.8380 & 0.5716 & 0.7116 & \textbf{0.6573} & 0.5012 & \textbf{0.5623} & 0.7568 \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
 \paragraph{Recall@K analysis.}
-Table~\ref{tab:recall_at_k} extracts the primary metric for direct comparison across methods and datasets. RP-GAAP achieves the best Recall@K on YelpChi~(+0.46) and T-Finance~(+1.11), while the combined RP-GAAP+Both ties for best on Elliptic~(+0.37) and ties with RP-GAAP on Tolokers~(+1.25). The largest absolute gain is observed on Tolokers, where RP-GAAP and the combined variant both achieve 0.5623 vs.\ the baseline 0.5498. On Elliptic, RP-GAAP and focal loss both reach 0.7359, offering a modest improvement over the 0.7322 baseline.
+Table~\ref{tab:recall_at_k} extracts the primary metric for direct comparison across methods and datasets. RP-GAAP achieves the best Recall@K on YelpChi~(+0.46) and T-Finance~(+1.11), while the combined RP-GAAP+Focal ties for best on Elliptic~(+0.37) and ties with RP-GAAP on Tolokers~(+1.25). The largest absolute gain is observed on Tolokers, where RP-GAAP and the combined variant both achieve 0.5623 vs.\ the baseline 0.5498. On Elliptic, RP-GAAP and focal loss both reach 0.7359, offering a modest improvement over the 0.7322 baseline.
 
 \begin{table}[h]
 \centering
@@ -51,7 +51,7 @@ Table~\ref{tab:recall_at_k} extracts the primary metric for direct comparison ac
 \label{tab:recall_at_k}
 \begin{tabular}{lcccc|c}
 \toprule
-Dataset & GAAP & +Focal & RP-GAAP & +Both & Best $\Delta$ \\
+Dataset & GAAP & +Focal & RP-GAAP & +Focal & Best $\Delta$ \\
 \midrule
 YelpChi     & 0.8839 & 0.8839 & \textbf{0.8885} & 0.8700 & +0.46 (Rare) \\
 T-Finance   & 0.8488 & 0.8571 & \textbf{0.8599} & 0.8571 & \textbf{+1.11} (Rare) \\
