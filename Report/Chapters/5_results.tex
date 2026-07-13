@@ -18,25 +18,25 @@ Dataset & Method & AUC & AP & MF1 & Recall & Prec & Recall@K & Acc \\
 & GAAP      & \textbf{0.9866} & \underline{0.9468} & \underline{0.9292} & 0.8339 & \underline{0.9257} & \underline{0.8839} & \underline{0.9667} \\
 & +Focal    & \underline{0.9855} & \textbf{0.9483} & 0.9281 & \textbf{0.8869} & 0.8669 & 0.8823 & 0.9640 \\
 & RP-GAAP   & 0.9842 & 0.9459 & \textbf{0.9333} & \underline{0.8400} & \textbf{0.9341} & \textbf{0.8862} & \textbf{0.9678} \\
-& +Both     & 0.9827 & 0.9321 & 0.9176 & 0.8077 & 0.9130 & 0.8700 & 0.9608 \\
+& +Focal     & 0.9827 & 0.9321 & 0.9176 & 0.8077 & 0.9130 & 0.8700 & 0.9608 \\
 \midrule
 \multirow{4}{*}{T-Finance} 
 & GAAP      & 0.9672 & \underline{0.9046} & 0.9219 & 0.8142 & 0.8907 & 0.8488 & 0.9870 \\
 & +Focal    & 0.9714 & 0.9032 & \underline{0.9313} & \underline{0.8197} & \underline{0.9234} & 0.8530 & \underline{0.9873} \\
 & RP-GAAP   & \underline{0.9726} & 0.9017 & 0.9288 & 0.8044 & \textbf{0.9325} & \textbf{0.8585} & 0.9872 \\
-& +Both     & \textbf{0.9741} & \textbf{0.9079} & \textbf{0.9314} & \textbf{0.8363} & 0.9041 & \underline{0.8571} & \textbf{0.9882} \\
+& +Focal     & \textbf{0.9741} & \textbf{0.9079} & \textbf{0.9314} & \textbf{0.8363} & 0.9041 & \underline{0.8571} & \textbf{0.9882} \\
 \midrule
 \multirow{4}{*}{Elliptic} 
 & GAAP      & 0.9257 & 0.7908 & \textbf{0.8737} & \underline{0.7285} & \textbf{0.8010} & \underline{0.7322} & \underline{0.9697} \\
 & +Focal    & \underline{0.9343} & \underline{0.7962} & \underline{0.8712} & \textbf{0.7295} & \underline{0.7900} & \textbf{0.7359} & \textbf{0.9734} \\
 & RP-GAAP   & \textbf{0.9348} & \textbf{0.7994} & 0.8611 & 0.7276 & 0.7526 & 0.7313 & 0.9693 \\
-& +Both     & 0.9310 & 0.7936 & 0.8638 & 0.7267 & 0.7641 & 0.7322 & 0.9479 \\
+& +Focal     & 0.9310 & 0.7936 & 0.8638 & 0.7267 & 0.7641 & 0.7322 & 0.9479 \\
 \midrule
 \multirow{4}{*}{Tolokers} 
 & GAAP      & \underline{0.8419} & \underline{0.5661} & 0.7084 & 0.5358 & \textbf{0.5495} & \underline{0.5498} & \textbf{0.8095} \\
 & +Focal    & 0.8359 & 0.5660 & 0.7023 & 0.5623 & 0.5194 & 0.5296 & 0.7364 \\
 & RP-GAAP   & 0.8374 & 0.5568 & \underline{0.7124} & \underline{0.6168} & 0.5170 & 0.5467 & \underline{0.7942} \\
-& +Both     & \textbf{0.8467} & \textbf{0.5720} & \textbf{0.7236} & \textbf{0.6511} & \underline{0.5265} & \textbf{0.5576} & 0.7269 \\
+& +Focal     & \textbf{0.8467} & \textbf{0.5720} & \textbf{0.7236} & \textbf{0.6511} & \underline{0.5265} & \textbf{0.5576} & 0.7269 \\
 \bottomrule
 \end{tabular}%
 }
@@ -51,7 +51,7 @@ Table~\ref{tab:recall_at_k} extracts the primary metric for direct comparison ac
 \label{tab:recall_at_k}
 \begin{tabular}{lcccc|c}
 \toprule
-Dataset & GAAP & +Focal & RP-GAAP & +Both & Best $\Delta$ \\
+Dataset & GAAP & +Focal & RP-GAAP & +Focal & Best $\Delta$ \\
 \midrule
 YelpChi     & \underline{0.8839} & 0.8823 & \textbf{0.8862} & 0.8700 & +0.23 \\
 T-Finance   & 0.8488 & 0.8530 & \textbf{0.8585} & \underline{0.8571} & \textbf{+0.97} \\
@@ -70,7 +70,7 @@ Table~\ref{tab:recall} highlights fraud-class recall, which measures the proport
 \label{tab:recall}
 \begin{tabular}{lcccc}
 \toprule
-Dataset & GAAP & +Focal & RP-GAAP & +Both \\
+Dataset & GAAP & +Focal & RP-GAAP & +Focal \\
 \midrule
 YelpChi     & 0.8339 & \textbf{0.8869} & \underline{0.8400} & 0.8077 \\
 T-Finance   & 0.8142 & \underline{0.8197} & 0.8044 & \textbf{0.8363} \\
@@ -90,7 +90,7 @@ To understand the sensitivity of RP-GAAP to its four hyperparameters, we ran a g
 
 \begin{table}[h]
 \centering
-\caption{Hyperparameter sweep on Tolokers (28 runs). Gain is the Recall@K difference between the best value and the default.}
+\caption{Hyperparameter sweep on Tolokers (28 runs). Gain is the Recall@K difference between the best value and the default, scaled $\times 10^2$.}
 \label{tab:sweep}
 \begin{tabular}{lcccc}
 \toprule

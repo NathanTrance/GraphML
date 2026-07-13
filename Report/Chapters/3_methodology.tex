@@ -9,9 +9,44 @@ Let $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ be a graph with $N = |\mathcal{V}
 
 \subsection{GAAP Overview}
 
-GAAP~\cite{duan2025global} processes each node through three stages. First, an adaptive binning module discretizes each feature dimension into a set of learned intervals, mapping continuous features to categorical embeddings. Second, a message-passing procedure aggregates these binned representations from each node's local neighborhood, producing per-node pattern embeddings that capture the interaction between the node's own binned attributes and those of its neighbors. Third, a global aggregation module computes pairwise correlations across all pattern embeddings in the graph, yielding a final node representation that encodes both local attribute-association patterns and their global co-occurrence structure.
+GAAP~\cite{duan2025global} processes each node through three stages: dynamic binning, message-passing, and global aggregation. We describe each in turn.
 
-Formally, let $\mathbf{h}_i \in \mathbb{R}^D$ denote the final representation of node $i$ output by GAAP, and let $\hat{\mathbf{y}}_i = \operatorname{softmax}(\mathbf{W} \mathbf{h}_i) \in \mathbb{R}^2$ be the predicted class probabilities. GAAP is trained by minimizing the standard cross-entropy loss over the training set:
+\subsubsection{Dynamic Binning Embedding (DyBEM)}
+
+Directly feeding raw continuous features into message passing causes inappropriate fusion of semantically distinct attributes (e.g., averaging Age~60 with Age~6 yields a meaningless Age~33). DyBEM addresses this by learning adaptive bin boundaries that preserve per-attribute semantics. For the $j$-th feature dimension, DyBEM learns $b$ bin boundaries $\{q_{j,1}, q_{j,2}, \dots, q_{j,b}\}$, initialized via decision-tree binning on the training set~\cite{duan2025global} and optimized jointly with the GNN. Each boundary is a linear function of a learnable parameter; the full set of boundaries induces a piecewise-linear encoding of $x_{i,j}$. Each scalar $x_{i,j}$ is mapped to a $b$-dimensional vector $\mathbf{e}_{i,j} \in \mathbb{R}^{b}$ where the $m$-th component encodes the fragment-wise degree of membership of $x_{i,j}$ in bin $m$. Features across all $d$ dimensions are concatenated to form the binned representation $\mathbf{E}_i \in \mathbb{R}^{d \times b}$, which is then projected to the GNN's hidden dimension via a learned linear transformation.
+
+\subsubsection{Message-Passing with GraphSAGE}
+
+GAAP employs GraphSAGE~\cite{hamilton2017inductive} with max-pooling aggregation as its GNN backbone. GraphSAGE is an inductive framework that generates embeddings by sampling and aggregating features from local neighborhoods, rather than learning a transductive embedding per node. For each node $v$ at layer $l+1$, the update rule is:
+
+\begin{equation}
+\mathbf{h}_v^{(l+1)} = \sigma\!\left(\mathbf{W}_{\text{self}}^{(l)} \mathbf{h}_v^{(l)} + \mathbf{W}_{\text{neigh}}^{(l)} \cdot \max_{u \in \mathcal{N}(v)} \sigma_{\text{pool}}\!\big(\mathbf{W}_{\text{pool}}^{(l)} \mathbf{h}_u^{(l)}\big)\right)
+\label{eq:sage}
+\end{equation}
+
+where $\mathbf{h}_v^{(0)}$ is the DyBEM-projected feature vector, $\mathcal{N}(v)$ denotes the neighborhood of $v$, and $\sigma$ is a ReLU activation. The max-pooling aggregation is chosen because it preserves the strongest signal per dimension rather than averaging it away---critical when a fraud node is surrounded by mostly benign neighbors, where mean aggregation would dilute the fraudulent signal. The output of the final GraphSAGE layer, denoted $\mathbf{g}_i \in \mathbb{R}^{d_h}$, represents the node's local \textit{association pattern}---the interaction between the node's own binned attribute pattern and those of its neighbors.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Figures/graphsage.jpg}
+    \caption{Visual illustration of the GraphSAGE sample and aggregate approach~\cite{hamilton2017inductive}. For each target node (center), GraphSAGE samples a fixed-size neighborhood, applies a learnable aggregation function (here max-pooling) to combine neighbor features, and concatenates the result with the node's own representation before transformation.}
+    \label{fig:graphsage}
+\end{figure}
+
+\subsubsection{Global Pattern Aggregation}
+
+To capture long-range dependencies and mitigate over-smoothing from stacked message-passing layers, GAAP applies a multi-head cross-attention module. Rather than computing pairwise attention over all $N$ nodes (prohibitively $\mathcal{O}(N^2)$), GAAP caches the GNN outputs from the previous epoch as historical embeddings $\tilde{\mathbf{G}} \in \mathbb{R}^{N \times d_h}$. For each node $i$, its current association pattern $\mathbf{g}_i$ serves as the query, while the cached $\tilde{\mathbf{G}}$ provides the keys and values:
+
+\begin{equation}
+\mathbf{o}_i = \operatorname{MHA}\big(\mathbf{Q} = \mathbf{g}_i,\; \mathbf{K} = \tilde{\mathbf{G}},\; \mathbf{V} = \tilde{\mathbf{G}}\big)
+\label{eq:mha}
+\end{equation}
+
+The final node representation is a residual combination $\mathbf{h}_i = \alpha \cdot \mathbf{o}_i + (1 - \alpha) \cdot \mathbf{W}_{\text{out}} \mathbf{g}_i$, with mixing coefficient $\alpha \in [0, 1]$. This design ensures that each node's representation captures both local association patterns (via GraphSAGE) and global co-occurrence structure (via cross-attention).
+
+\subsubsection{GAAP Training Objective}
+
+Let $\mathbf{h}_i \in \mathbb{R}^D$ denote the final representation of node $i$ output by GAAP, and let $\hat{\mathbf{y}}_i = \operatorname{softmax}(\mathbf{W} \mathbf{h}_i) \in \mathbb{R}^2$ be the predicted class probabilities. GAAP is trained by minimizing the standard cross-entropy loss over the training set:
 
 \begin{equation}
 \mathcal{L}_{\text{GAAP}} = -\frac{1}{|\mathcal{T}_{\text{train}}|} \sum_{i \in \mathcal{T}_{\text{train}}} \log \hat{y}_{i, y_i},
@@ -19,6 +54,13 @@ Formally, let $\mathbf{h}_i \in \mathbb{R}^D$ denote the final representation of
 \end{equation}
 
 where $\hat{y}_{i,c}$ is the predicted probability for class $c$. Every training node contributes equally to Equation~\ref{eq:gaap_loss}, regardless of how frequently its attribute-association pattern appears in the dataset.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Figures/framework_crc.jpg}
+    \caption{The GAAP framework. DyBEM creates binned attribute patterns from raw features, GraphSAGE (Eq.~\ref{eq:sage}) extracts association patterns via max-pooling neighborhood aggregation, and global cross-attention (Eq.~\ref{eq:mha}) captures long-range pattern correlations using cached historical embeddings. Figure adapted from~\cite{duan2025global}.}
+    \label{fig:gaap-framework}
+\end{figure}
 
 \subsection{Rare-Pattern Weighting}
 
@@ -58,18 +100,49 @@ w_i = \min\left(\tilde{w}_i \cdot \phi^{\mathbb{1}[y_i = 1]}, \; w_{\text{max}} 
 
 where $\phi \geq 1$ is the fraud boost multiplier, and the indicator $\mathbb{1}[y_i = 1]$ ensures the boost applies only to fraud nodes. The final weight $w_i$ is clipped to $[1.0, \; w_{\text{max}} \cdot \phi]$. Nodes not in the training set receive $w_i = 1.0$. The resulting weight vector $\mathbf{w} \in \mathbb{R}^N$ requires no gradient computation and is evaluated once before training begins.
 
+\paragraph{Algorithm.}
+Algorithm~\ref{alg:rare_weights} formalizes the weight computation procedure.
+
+\begin{algorithm}[htbp]
+\caption{Rare-pattern weight computation. Weights are precomputed once on CPU before training; no gradients are required.}
+\label{alg:rare_weights}
+\begin{algorithmic}[1]
+\Require $\mathbf{X} \in \mathbb{R}^{N \times d}$, $\mathbf{y} \in \{0,1\}^N$, train mask $\mathcal{T}$, $k$, $b$, $w_{\text{max}}$, $\phi$
+\Ensure $\mathbf{w} \in \mathbb{R}^N$
+\State $\mathbf{w} \gets \mathbf{1}_N$
+\State $\mathbf{X}_{\text{tr}} \gets \mathbf{X}[\mathcal{T}],\ \mathbf{y}_{\text{tr}} \gets \mathbf{y}[\mathcal{T}]$
+\State $\mathcal{S} \gets$ top-$k$ feature indices by variance over $\mathbf{X}_{\text{tr}}$
+\For{$j \in \mathcal{S}$}
+    \State $Q_j \gets \text{quantile\_boundaries}(\mathbf{X}_{\text{tr}}[:,\,j],\ b)$ \Comment{$b+1$ boundaries}
+    \State $c_{i,j} \gets \text{digitize}(x_{i,j},\ Q_j)$ \Comment{$\forall i \in \mathcal{T}$}
+\EndFor
+\State $p_i \gets \sum_{j \in \mathcal{S}} c_{i,j} \cdot b^{\pi(j)}$ \Comment{$\forall i \in \mathcal{T}$}
+\State $\mathcal{P},\, f \gets \text{unique\_counts}(p)$
+\If{$\max f = \min f$}
+    \State \Return $\mathbf{w}$
+\EndIf
+\State $r(p_i) \gets (\max f - f(p_i))\, /\, (\max f - \min f)$ \Comment{$\forall i \in \mathcal{T}$}
+\State $w_i \gets 1.0 + (w_{\text{max}} - 1.0) \cdot r(p_i)$ \Comment{$\forall i \in \mathcal{T}$}
+\For{$i \in \mathcal{T}$ where $y_i = 1$}
+    \State $w_i \gets w_i \cdot \phi$
+\EndFor
+\State $w_i \gets \min(w_i,\ w_{\text{max}} \cdot \phi)$ \Comment{$\forall i \in \mathcal{T}$}
+\State \Return $\mathbf{w}$
+\end{algorithmic}
+\end{algorithm}
+
 \subsection{RP-GAAP Training Objective}
 
-We integrate the rarity weights into the cross-entropy loss by replacing the uniform average in Equation~\ref{eq:gaap_loss} with a weighted sum:
+We integrate the rarity weights into the cross-entropy loss by multiplying each per-sample loss term by its weight:
 
 \begin{equation}
-\mathcal{L}_{\text{RP-GAAP}} = - \frac{1}{\sum_{i \in \mathcal{T}_{\text{train}}} w_i} \sum_{i \in \mathcal{T}_{\text{train}}} w_i \cdot \log \hat{y}_{i, y_i}.
+\mathcal{L}_{\text{RP-GAAP}} = \frac{1}{|\mathcal{T}_{\text{train}}|} \sum_{i \in \mathcal{T}_{\text{train}}} w_i \cdot \big(-\log \hat{y}_{i, y_i}\big).
 \label{eq:rpgaap_loss}
 \end{equation}
 
 The GAAP model forward pass is entirely unchanged: rarity weights modify only the scalar multiplier applied to each per-node loss term. At inference, no weighting is applied.
 
-The method introduces exactly three hyperparameters: the number of quantile bins $b$, the number of selected features $k$, and the maximum weight $w_{\text{max}}$, plus the fraud boost $\phi$. We use $b = 5$, $k = 10$, $w_{\text{max}} = 3.0$, and $\phi = 1.5$ across all experiments unless otherwise noted.
+The method introduces four hyperparameters: the number of quantile bins $b$, the number of selected features $k$, the maximum weight $w_{\text{max}}$, and the fraud boost $\phi$. We use $b = 5$, $k = 10$, $w_{\text{max}} = 3.0$, and $\phi = 1.5$ across all experiments unless otherwise noted.
 
 \subsection{Ablation: Focal Loss}
 

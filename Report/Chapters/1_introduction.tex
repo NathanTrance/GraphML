@@ -17,7 +17,7 @@ We propose RP-GAAP (Rare-Pattern-weighted GAAP), a lightweight extension that ap
 
 \begin{itemize}
     \item We introduce a simple, non-parametric rarity scoring mechanism that discretizes the top-$k$ features of each node into quantile bins, counts pattern co-occurrence frequencies across the training set, and assigns higher loss weights to nodes whose attribute-association patterns are underrepresented.
-    \item We integrate these rarity scores as per-sample weights into GAAP's cross-entropy loss, yielding the RP-GAAP training objective with only three hyperparameters (number of bins $b$, number of features $k$, and maximum weight $w_{\text{max}}$), requiring no modification to the model forward pass.
+    \item We integrate these rarity scores as per-sample weights into GAAP's cross-entropy loss, yielding the RP-GAAP training objective with only four hyperparameters ($b$, $k$, $w_{\text{max}}$, and $\phi$), requiring no modification to the model forward pass.
     \item We evaluate RP-GAAP against the original GAAP on four real-world fraud detection benchmarks (YelpChi, T-Finance, Elliptic, and Tolokers), demonstrating improved fraud recall and Recall@K on YelpChi and T-Finance---with a $+0.97$ percentage-point gain on T-Finance---alongside ablations comparing rare-pattern weighting against focal loss~\cite{lin2017focal} and their combination.
 \end{itemize}
 
