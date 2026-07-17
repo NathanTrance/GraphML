@@ -1,11 +1,9 @@
 \section{Proposed Method}
 \label{sec:method}
 
-\subsection{Preliminaries}
+\subsection{Preliminaries: GAAP}
 
 Let $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ be an attributed graph with $N = |\mathcal{V}|$ nodes. Each node $i$ has a feature vector $\mathbf{x}_i \in \mathbb{R}^d$ and a binary label $y_i \in \{0, 1\}$ (0 = benign, 1 = fraud). The nodes are partitioned into disjoint training, validation, and test sets. Fraud typically constitutes 3--17\% of nodes, making the problem severely class-imbalanced.
-
-\subsection{Background: GAAP}
 
 GAAP~\cite{duan2025gaap} produces a node representation $\mathbf{h}_i \in \mathbb{R}^D$ for each node $i$ through three stages, then predicts $\hat{\mathbf{y}}_i = \operatorname{softmax}(\mathbf{W} \mathbf{h}_i)$ and is trained with cross-entropy. Its design is well-suited to our benchmarks: DyBEM preserves per-attribute semantics across heterogeneous node features, GraphSAGE extracts relational fraud signals from interaction graphs, and global attention captures long-range dependencies without over-smoothing.
 
